@@ -1,0 +1,23 @@
+name: RealWorld CI/CD
+
+on:
+  push:
+    branches: [ "main", "production" ]
+
+jobs:
+  build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+        # خطوة بناء صورة الـ Backend
+      - name: Build Backend Image
+        run: docker build -t realworld-backend:latest ./backend
+
+      # خطوة بناء صورة الـ Frontend
+      - name: Build Frontend Image
+        run: docker build -t realworld-frontend:latest ./frontend
+

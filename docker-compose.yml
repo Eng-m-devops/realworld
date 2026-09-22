@@ -1,0 +1,85 @@
+services:
+  # -----------------------------------------------
+  # خدمة قاعدة البيانات (PostgreSQL)
+  # -----------------------------------------------
+  db:
+    image: postgres:15-alpine
+    container_name: postgres-container
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - realworld-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # -----------------------------------------------
+  # خدمة الـ Backend (Django)
+  # -----------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend-container
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - realworld-net
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c ''import urllib.request; urllib.request.urlopen("http://localhost:8000/admin/")'' || exit 1',
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s # -----------------------------------------------
+  # خدمة الـ Frontend (React + Nginx)
+  # -----------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend-container
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - realworld-net
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost/ || exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+# -----------------------------------------------
+# شبكة Docker لربط الحاويات
+# -----------------------------------------------
+networks:
+  realworld-net:
+    driver: bridge
+
+# -----------------------------------------------
+# المجلدات المخصصة (Volumes)
+# -----------------------------------------------
+volumes:
+  postgres_data:
