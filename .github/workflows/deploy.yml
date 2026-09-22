@@ -3,21 +3,86 @@ name: RealWorld CI/CD
 on:
   push:
     branches: [ "main", "production" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
+  # ==========================================
+  # Job 1: مرحلة الاختبار (Test Phase)
+  # ==========================================
+  test:
+    name: Run Unit Tests (Django & React)
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. جلب الكود إلى السيرفر المؤقت
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # ----------------------------------------
+      # أ) اختبارات الـ Django Backend
+      # ----------------------------------------
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # حدد إصدار بايثون الخاص بمشروعك
+
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run Django Tests
+        run: |
+          cd backend
+          python manage.py test
+
+      # ----------------------------------------
+      # ب) اختبارات الـ React Frontend
+      # ----------------------------------------
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # حدد إصدار نود الخاص بمشروعك
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run React Tests
+        run: |
+          cd frontend
+          # CI=true تضمن تشغيل الاختبارات لمرة واحدة دون الانتظار التفاعلي (Watch mode)
+          CI=true npm test
+
+  # ==========================================
+  # Job 2: مرحلة البناء والرفع (Build & Push Phase)
+  # ==========================================
   build:
-    name: Build Docker Images
+    name: Build & Push Docker Images
     runs-on: ubuntu-latest
     
+    # الشرط الأهم: لن تبدأ هذه الـ Job إلا بعد نجاح Job الـ test بالكامل
+    needs: test
+
     steps:
       - name: Check out code
         uses: actions/checkout@v4
 
-        # خطوة بناء صورة الـ Backend
-      - name: Build Backend Image
-        run: docker build -t realworld-backend:latest ./backend
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # خطوة بناء صورة الـ Frontend
-      - name: Build Frontend Image
-        run: docker build -t realworld-frontend:latest ./frontend
+      - name: Build and Push Backend Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/realworld-backend:latest ./backend
+          docker push ${{ secrets.DOCKER_USERNAME }}/realworld-backend:latest
 
+      - name: Build and Push Frontend Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/realworld-frontend:latest ./frontend
+          docker push ${{ secrets.DOCKER_USERNAME }}/realworld-frontend:latest
