@@ -97,3 +97,24 @@
       command: docker compose up -d
       args:
         chdir: "{{ app_dir }}"
+
+    # -----------------------------------------------
+    # 3. تثبيت وضبط شهادة الـ SSL (Let's Encrypt)
+    # -----------------------------------------------
+    - name: Install Certbot and Python Nginx plugin
+      apt:
+        name:
+          - certbot
+          - python3-certbot-nginx
+        state: present
+        update_cache: yes
+
+    - name: Check if SSL certificate already exists
+      stat:
+        path: "/etc/letsencrypt/live/{{ domain_name | default('yourdomain.com') }}/fullchain.pem"
+      register: ssl_cert
+
+    - name: Obtain SSL certificate using Certbot (Standalone/Webroot or Nginx)
+      command: certbot --nginx -d {{ domain_name | default('yourdomain.com') }} --non-interactive --agree-tos -m admin@{{ domain_name | default('yourdomain.com') }} --redirect
+      when: not ssl_cert.stat.exists
+      ignore_errors: yes
