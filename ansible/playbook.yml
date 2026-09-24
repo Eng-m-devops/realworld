@@ -1,0 +1,99 @@
+---
+- name: Setup Docker and Deploy RealWorld Application on Ubuntu
+  hosts: webservers
+  become: true # تشغيل المهام بصلاحيات root
+  vars:
+    docker_hub_username: "mahmoodahmed11"
+    docker_hub_password: "YOUR_DOCKER_HUB_ACCESS_TOKEN" # استبدلها بـ Token أو كلمة مرور Docker Hub
+    app_dir: "/home/ubuntu/app"
+
+  tasks:
+    # -----------------------------------------------
+    # 1. إعداد وتثبيت Docker & Docker Compose
+    # -----------------------------------------------
+    - name: Update apt package index
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install required system packages
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+
+    - name: Create directory for Docker GPG key
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add Docker OFFICIAL GPG key
+      get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: Add Docker repository to Apt sources
+      apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable"
+        state: present
+        filename: docker
+
+    - name: Install Docker engine and Compose
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Ensure Docker service is started and enabled
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add 'ubuntu' user to the 'docker' group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    # -----------------------------------------------
+    # 2. نشر التطبيق ونسخ الملفات وتغشيل الحاويات
+    # -----------------------------------------------
+    - name: Create application directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+
+    - name: Copy docker-compose.yml to server
+      copy:
+        src: ./docker-compose.Prod.yml
+        dest: "{{ app_dir }}/docker-compose.yml"
+        owner: ubuntu
+        group: ubuntu
+        mode: "0644"
+
+    - name: Copy .env file to server
+      copy:
+        src: ./.env.prod
+        dest: "{{ app_dir }}/.env"
+        owner: ubuntu
+        group: ubuntu
+        mode: "0600"
+
+    - name: Pull Docker images and start application
+      command: docker compose up -d
+      args:
+        chdir: "{{ app_dir }}"
