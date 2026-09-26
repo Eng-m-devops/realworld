@@ -1,73 +1,43 @@
----
-- name: Setup Docker and Deploy RealWorld Application on Ubuntu
+- name: Deploy RealWorld Application
   hosts: webservers
-  become: true # تشغيل المهام بصلاحيات root
+  become: yes
   vars:
-    docker_hub_username: "mahmoodahmed11"
-    docker_hub_password: "YOUR_DOCKER_HUB_ACCESS_TOKEN" # استبدلها بـ Token أو كلمة مرور Docker Hub
-    app_dir: "/home/ubuntu/app"
+    app_dir: /home/ubuntu/app
 
   tasks:
     # -----------------------------------------------
-    # 1. إعداد وتثبيت Docker & Docker Compose
+    # 1. تثبيت وضبط Nginx على السيرفر الرئيسي
     # -----------------------------------------------
-    - name: Update apt package index
-      apt:
-        update_cache: yes
-        cache_valid_time: 3600
-
-    - name: Install required system packages
+    - name: Install Nginx web server and Certbot
       apt:
         name:
-          - ca-certificates
-          - curl
-          - gnupg
-          - lsb-release
-        state: present
-
-    - name: Create directory for Docker GPG key
-      file:
-        path: /etc/apt/keyrings
-        state: directory
-        mode: "0755"
-
-    - name: Add Docker OFFICIAL GPG key
-      get_url:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        dest: /etc/apt/keyrings/docker.asc
-        mode: "0644"
-
-    - name: Add Docker repository to Apt sources
-      apt_repository:
-        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable"
-        state: present
-        filename: docker
-
-    - name: Install Docker engine and Compose
-      apt:
-        name:
-          - docker-ce
-          - docker-ce-cli
-          - containerd.io
-          - docker-buildx-plugin
-          - docker-compose-plugin
+          - nginx
+          - certbot
+          - python3-certbot-nginx
         state: present
         update_cache: yes
 
-    - name: Ensure Docker service is started and enabled
-      systemd:
-        name: docker
+    - name: Ensure Nginx service is running and enabled
+      service:
+        name: nginx
         state: started
         enabled: yes
 
-    - name: Add 'ubuntu' user to the 'docker' group
-      user:
-        name: ubuntu
-        groups: docker
-        append: yes
+    - name: Copy Nginx site configuration to host
+      copy:
+        src: ./nginx-host.conf
+        dest: /etc/nginx/sites-available/default
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Reload Nginx to apply changes
+      service:
+        name: nginx
+        state: reloaded
 
     # -----------------------------------------------
-    # 2. نشر التطبيق ونسخ الملفات وتغشيل الحاويات
+    # 2. إعداد مجلد التطبيق وتشغيل الحاويات
     # -----------------------------------------------
     - name: Create application directory
       file:
@@ -75,7 +45,6 @@
         state: directory
         owner: ubuntu
         group: ubuntu
-        mode: "0755"
 
     - name: Copy docker-compose.yml to server
       copy:
@@ -85,36 +54,18 @@
         group: ubuntu
         mode: "0644"
 
-    - name: Copy .env file to server
+    - name: Create .env file on remote server from secure variables
       copy:
-        src: ./.env.prod
+        content: |
+          POSTGRES_PASSWORD={{ postgres_password }}
+          DJANGO_SECRET_KEY={{ django_secret_key }}
         dest: "{{ app_dir }}/.env"
         owner: ubuntu
         group: ubuntu
         mode: "0600"
 
-    - name: Pull Docker images and start application
-      command: docker compose up -d
+    - name: Pull latest docker images and restart containers
+      shell: |
+        docker compose pull && docker compose up -d
       args:
         chdir: "{{ app_dir }}"
-
-    # -----------------------------------------------
-    # 3. تثبيت وضبط شهادة الـ SSL (Let's Encrypt)
-    # -----------------------------------------------
-    - name: Install Certbot and Python Nginx plugin
-      apt:
-        name:
-          - certbot
-          - python3-certbot-nginx
-        state: present
-        update_cache: yes
-
-    - name: Check if SSL certificate already exists
-      stat:
-        path: "/etc/letsencrypt/live/{{ domain_name | default('yourdomain.com') }}/fullchain.pem"
-      register: ssl_cert
-
-    - name: Obtain SSL certificate using Certbot (Standalone/Webroot or Nginx)
-      command: certbot --nginx -d {{ domain_name | default('yourdomain.com') }} --non-interactive --agree-tos -m admin@{{ domain_name | default('yourdomain.com') }} --redirect
-      when: not ssl_cert.stat.exists
-      ignore_errors: yes

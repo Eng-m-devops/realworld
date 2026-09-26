@@ -23,9 +23,11 @@ services:
   # خدمة الـ Backend (Django) - تم تعديلها لسحب الصورة
   # -----------------------------------------------
   backend:
-    image: mahmoodahmed11/realworld-backend:latest # تعديل: استبدال build بـ image
+    image: mahmoodahmed11/realworld-backend:latest
     container_name: backend-container
     restart: always
+    ports:
+      - "127.0.0.1:8000:8000" # ربط الـ Backend محلياً فقط
     env_file:
       - .env
     depends_on:
@@ -48,12 +50,11 @@ services:
   # خدمة الـ Frontend (React + Nginx) - تم تعديلها لسحب الصورة
   # -----------------------------------------------
   frontend:
-    image: mahmoodahmed11/realworld-frontend:latest # تعديل: استبدال build بـ image (كما يظهر في حسابه عندك)
+    image: mahmoodahmed11/realworld-frontend:latest
     container_name: frontend-container
     restart: always
     ports:
-      - "80:80" # يمكن تعديله إلى 80:80 ليعمل مباشرة على منفذ الويب القياسي في AWS
-      - "443:443"
+      - "127.0.0.1:8080:80" # تغيير منفذ الـ Frontend إلى 8080 محلياً
     depends_on:
       backend:
         condition: service_healthy
