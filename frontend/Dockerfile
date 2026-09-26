@@ -13,20 +13,13 @@ RUN npm run build
 
 
 FROM nginx:alpine
-# إنشاء شهادة SSL ذاتية التوقيع لاستخدامها على الـ IP المباشر
-RUN apk add --no-cache openssl && \
-    mkdir -p /etc/nginx/ssl && \
-    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-    -keyout /etc/nginx/ssl/selfsigned.key \
-    -out /etc/nginx/ssl/selfsigned.crt \
-    -subj "/C=US/ST=State/L=City/O=RealWorld/OU=DevOps/CN=100.48.89.109"
-
-# نسخ إعدادات Nginx المخصصة لتوجيه الـ API والـ SSL
+# نسخ إعدادات Nginx المخصصة لتقديم ملفات React داخل الحاوية
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# نسخ ملفات البناء
 COPY --from=builder /app/build /usr/share/nginx/html
 
-EXPOSE 80 443
+EXPOSE 80
 
 CMD [ "nginx", "-g", "daemon off;" ]
 

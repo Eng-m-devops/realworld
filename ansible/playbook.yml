@@ -5,6 +5,12 @@
     app_dir: /home/ubuntu/app
 
   tasks:
+    - name: Clean up unused Docker cache and apt cache to free disk space
+      shell: |
+        docker system prune -f || true
+        apt-get clean || true
+      ignore_errors: yes
+
     # -----------------------------------------------
     # 1. تثبيت وضبط Nginx على السيرفر الرئيسي
     # -----------------------------------------------

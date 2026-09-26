@@ -114,6 +114,9 @@ jobs:
           ssh-private-key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
 
       - name: Run Ansible Playbook
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
         run: |
           cd ansible
           # إضافة السيرفر مؤقتاً للـ known_hosts لتجنب التوقف التفاعلي
@@ -123,5 +126,7 @@ jobs:
           # تثبيت Ansible في الـ Runner المؤقت
           sudo apt-get update && sudo apt-get install -y ansible
           
-          # تشغيل النشر
-          ansible-playbook -i hosts.ini playbook.yml -v
+          # تشغيل النشر مع تمرير الأسرار كمتغيرات لـ Ansible
+          ansible-playbook -i hosts.ini playbook.yml -v \
+            -e postgres_password="$POSTGRES_PASSWORD" \
+            -e django_secret_key="$DJANGO_SECRET_KEY"
