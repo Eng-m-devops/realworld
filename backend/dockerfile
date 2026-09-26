@@ -18,5 +18,5 @@ RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
 
-# الأمر الافتراضي الذي سيتم تمريره للـ Entrypoint
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# تشغيل خادم الإنتاج Gunicorn بدلاً من runserver
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "conduit.wsgi:application"]

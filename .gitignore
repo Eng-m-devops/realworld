@@ -1,0 +1,14 @@
+.env
+.pyc
+.env.prod
+*.pem
+*.key
+.hosts.ini
+# Terraform
+terraform/
+terrform/
+*.tfstate
+*.tfstate.*
+*.terraform/
+*.terraform.lock.hcl
+*.tfvars

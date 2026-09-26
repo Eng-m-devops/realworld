@@ -13,9 +13,10 @@ RUN npm run build
 
 
 FROM nginx:alpine
-# نسخ إعدادات Nginx المخصصة لتوجيه الـ API
+# نسخ إعدادات Nginx المخصصة لتقديم ملفات React داخل الحاوية
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# نسخ ملفات البناء
 COPY --from=builder /app/build /usr/share/nginx/html
 
 EXPOSE 80

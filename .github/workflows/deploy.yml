@@ -1,4 +1,4 @@
-name: RealWorld CI/CD
+name: RealWorld CI/CD & Auto Deploy
 
 on:
   push:
@@ -8,63 +8,69 @@ on:
 
 jobs:
   # ==========================================
-  # Job 1: مرحلة الاختبار (Test Phase)
+  # Job 1: تحديد الملفات التي تغيرت (Path Filter)
+  # ==========================================
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+
+  # ==========================================
+  # Job 2: مرحلة الاختبار (Test Phase)
   # ==========================================
   test:
-    name: Run Unit Tests (Django & React)
+    name: Run Unit Tests
     runs-on: ubuntu-latest
-
+    needs: detect-changes
     steps:
-      # 1. جلب الكود إلى السيرفر المؤقت
       - name: Check out repository
         uses: actions/checkout@v4
 
-      # ----------------------------------------
-      # أ) اختبارات الـ Django Backend
-      # ----------------------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11' # حدد إصدار بايثون الخاص بمشروعك
+          python-version: '3.11'
 
-      - name: Install Backend Dependencies
+      - name: Install & Test Backend (if changed)
+        if: needs.detect-changes.outputs.backend == 'true'
         run: |
           cd backend
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Run Django Tests
-        run: |
-          cd backend
           python manage.py test
 
-      # ----------------------------------------
-      # ب) اختبارات الـ React Frontend
-      # ----------------------------------------
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # حدد إصدار نود الخاص بمشروعك
+          node-version: '24'
 
-      - name: Install Frontend Dependencies
+      - name: Install & Test Frontend (if changed)
+        if: needs.detect-changes.outputs.frontend == 'true'
         run: |
           cd frontend
-           npm install
-      - name: Run React Tests
-        run: |
-          cd frontend
-          # CI=true تضمن تشغيل الاختبارات لمرة واحدة دون الانتظار التفاعلي (Watch mode)
+          npm install
           CI=true npm test
 
   # ==========================================
-  # Job 2: مرحلة البناء والرفع (Build & Push Phase)
+  # Job 3: مرحلة البناء والرفع الذكي (Smart Build)
   # ==========================================
   build:
     name: Build & Push Docker Images
     runs-on: ubuntu-latest
-    
-    # الشرط الأهم: لن تبدأ هذه الـ Job إلا بعد نجاح Job الـ test بالكامل
-    needs: test
+    needs: [detect-changes, test]
+    # يتم البناء فقط إذا حدث تغيير حقيقي في الكود ولم يتم تخطيه
+    if: needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.frontend == 'true'
 
     steps:
       - name: Check out code
@@ -76,12 +82,51 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push Backend Image
+      - name: Build and Push Backend Image (If backend changed)
+        if: needs.detect-changes.outputs.backend == 'true'
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/realworld-backend:latest ./backend
           docker push ${{ secrets.DOCKER_USERNAME }}/realworld-backend:latest
 
-      - name: Build and Push Frontend Image
+      - name: Build and Push Frontend Image (If frontend changed)
+        if: needs.detect-changes.outputs.frontend == 'true'
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/realworld-frontend:latest ./frontend
           docker push ${{ secrets.DOCKER_USERNAME }}/realworld-frontend:latest
+
+  # ==========================================
+  # Job 4: النشر التلقائي عبر Ansible (عند الدمج في production)
+  # ==========================================
+  deploy:
+    name: Deploy to AWS EC2 via Ansible
+    runs-on: ubuntu-latest
+    needs: build
+    # هذه الخطوة ستعمل حصرياً عندما يتم الرفع أو الدمج في برانش production
+    if: github.ref == 'refs/heads/production' && (success())
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH Key for AWS EC2
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
+
+      - name: Run Ansible Playbook
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+        run: |
+          cd ansible
+          # إضافة السيرفر مؤقتاً للـ known_hosts لتجنب التوقف التفاعلي
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 100.48.89.109 >> ~/.ssh/known_hosts
+          
+          # تثبيت Ansible في الـ Runner المؤقت
+          sudo apt-get update && sudo apt-get install -y ansible
+          
+          # تشغيل النشر مع تمرير الأسرار كمتغيرات لـ Ansible
+          ansible-playbook -i hosts.ini playbook.yml -v \
+            -e postgres_password="$POSTGRES_PASSWORD" \
+            -e django_secret_key="$DJANGO_SECRET_KEY"
