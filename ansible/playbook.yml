@@ -12,38 +12,7 @@
       ignore_errors: yes
 
     # -----------------------------------------------
-    # 1. تثبيت وضبط Nginx على السيرفر الرئيسي
-    # -----------------------------------------------
-    - name: Install Nginx web server and Certbot
-      apt:
-        name:
-          - nginx
-          - certbot
-          - python3-certbot-nginx
-        state: present
-        update_cache: yes
-
-    - name: Ensure Nginx service is running and enabled
-      service:
-        name: nginx
-        state: started
-        enabled: yes
-
-    - name: Copy Nginx site configuration to host
-      copy:
-        src: ./nginx-host.conf
-        dest: /etc/nginx/sites-available/default
-        owner: root
-        group: root
-        mode: "0644"
-
-    - name: Reload Nginx to apply changes
-      service:
-        name: nginx
-        state: reloaded
-
-    # -----------------------------------------------
-    # 2. إعداد مجلد التطبيق وتشغيل الحاويات
+    # 1. إيقاف الحاويات القديمة لتحرير المنفذ 80 لـ Nginx الرئيسي
     # -----------------------------------------------
     - name: Create application directory
       file:
@@ -60,6 +29,42 @@
         group: ubuntu
         mode: "0644"
 
+    - name: Stop old docker containers to release port 80
+      shell: |
+        docker compose down --remove-orphans || true
+      args:
+        chdir: "{{ app_dir }}"
+      ignore_errors: yes
+
+    # -----------------------------------------------
+    # 2. تثبيت وضبط Nginx على السيرفر الرئيسي
+    # -----------------------------------------------
+    - name: Install Nginx web server and Certbot
+      apt:
+        name:
+          - nginx
+          - certbot
+          - python3-certbot-nginx
+        state: present
+        update_cache: yes
+
+    - name: Copy Nginx site configuration to host
+      copy:
+        src: ./nginx-host.conf
+        dest: /etc/nginx/sites-available/default
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Ensure Nginx service is running and enabled
+      service:
+        name: nginx
+        state: restarted
+        enabled: yes
+
+    # -----------------------------------------------
+    # 3. إنشاء البيئة وتشغيل الحاويات الجديدة
+    # -----------------------------------------------
     - name: Create .env file on remote server from secure variables
       copy:
         content: |
