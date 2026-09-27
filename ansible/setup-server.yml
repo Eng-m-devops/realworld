@@ -20,16 +20,12 @@
     - name: Add Docker official GPG key
       shell: |
         install -m 0755 -d /etc/apt/keyrings
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.gpg
-        chmod a+r /etc/apt/keyrings/docker.gpg
-      creates: /etc/apt/keyrings/docker.gpg
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+        chmod a+r /etc/apt/keyrings/docker.asc
 
     - name: Set up Docker repository
       shell: |
-        echo \
-          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-          $(. /etc/release 2>/dev/null && echo $UBUNTU_CODENAME || lsb_release -cs) stable" | \
-          tee /etc/apt/sources.list.d/docker.list > /dev/null
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
 
     - name: Install Docker and Docker Compose
       apt:
@@ -55,9 +51,10 @@
         append: yes
 
     - name: Install Netdata Monitoring Agent (Optional for monitoring)
-      shell: curl https://my-netdata.io/kickstart.sh > /tmp/netdata-kickstart.sh && sh /tmp/netdata-kickstart.sh --non-interactive
+      shell: curl -fsSL https://get.netdata.cloud/kickstart.sh -o /tmp/netdata-kickstart.sh && sh /tmp/netdata-kickstart.sh --non-interactive
       args:
         creates: /usr/sbin/netdata
+      ignore_errors: yes
 
     - name: Create Swap Space (2GB) to prevent OOM
       shell: |

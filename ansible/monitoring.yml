@@ -63,6 +63,9 @@
         owner: ubuntu
         group: ubuntu
 
+    - name: Clean up unused Docker images and build cache
+      shell: docker system prune -af --volumes || true
+
     - name: Start Prometheus and Grafana containers
       shell: docker compose up -d
       args:

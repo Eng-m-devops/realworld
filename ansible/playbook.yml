@@ -85,11 +85,9 @@
     # -----------------------------------------------
     # 3. إنشاء البيئة وتشغيل الحاويات الجديدة
     # -----------------------------------------------
-    - name: Create .env file on remote server from secure variables
+    - name: Copy .env.prod file to server
       copy:
-        content: |
-          POSTGRES_PASSWORD={{ postgres_password }}
-          DJANGO_SECRET_KEY={{ django_secret_key }}
+        src: ./.env.prod
         dest: "{{ app_dir }}/.env"
         owner: ubuntu
         group: ubuntu

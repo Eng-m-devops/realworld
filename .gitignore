@@ -4,11 +4,11 @@
 *.pem
 *.key
 .hosts.ini
-# Terraform
-terraform/
-terrform/
+# Terraform & OpenTofu
+.terraform/
 *.tfstate
 *.tfstate.*
 *.terraform/
 *.terraform.lock.hcl
 *.tfvars
+!*.tfvars.example
