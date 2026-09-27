@@ -11,6 +11,18 @@
         apt-get clean || true
       ignore_errors: yes
 
+    - name: Create Swap Space (2GB) to prevent OOM
+      shell: |
+        if [ ! -f /swapfile ]; then
+          fallocate -l 2G /swapfile
+          chmod 600 /swapfile
+          mkswap /swapfile
+          swapon /swapfile
+          echo '/swapfile none swap sw 0 0' >> /etc/fstab
+        fi
+      args:
+        creates: /swapfile
+
     # -----------------------------------------------
     # 1. إيقاف الحاويات القديمة لتحرير المنفذ 80 لـ Nginx الرئيسي
     # -----------------------------------------------

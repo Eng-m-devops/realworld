@@ -82,16 +82,18 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push Backend Image (If backend changed)
+      - name: Build and Push Backend Image with Git SHA
         if: needs.detect-changes.outputs.backend == 'true'
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/realworld-backend:latest ./backend
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/realworld-backend:${{ github.sha }} -t ${{ secrets.DOCKER_USERNAME }}/realworld-backend:latest ./backend
+          docker push ${{ secrets.DOCKER_USERNAME }}/realworld-backend:${{ github.sha }}
           docker push ${{ secrets.DOCKER_USERNAME }}/realworld-backend:latest
 
-      - name: Build and Push Frontend Image (If frontend changed)
+      - name: Build and Push Frontend Image with Git SHA (If frontend changed)
         if: needs.detect-changes.outputs.frontend == 'true'
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/realworld-frontend:latest ./frontend
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/realworld-frontend:${{ github.sha }} -t ${{ secrets.DOCKER_USERNAME }}/realworld-frontend:latest ./frontend
+          docker push ${{ secrets.DOCKER_USERNAME }}/realworld-frontend:${{ github.sha }}
           docker push ${{ secrets.DOCKER_USERNAME }}/realworld-frontend:latest
 
   # ==========================================
@@ -121,8 +123,7 @@ jobs:
           cd ansible
           # إضافة السيرفر مؤقتاً للـ known_hosts لتجنب التوقف التفاعلي
           mkdir -p ~/.ssh
-          ssh-keyscan -H 100.48.89.109 >> ~/.ssh/known_hosts
-          
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts          
           # تثبيت Ansible في الـ Runner المؤقت
           sudo apt-get update && sudo apt-get install -y ansible
           
