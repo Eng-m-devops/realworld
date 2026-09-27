@@ -41,6 +41,14 @@
         group: ubuntu
         mode: "0644"
 
+    - name: Copy prometheus.yml to server
+      copy:
+        src: ./prometheus.yml
+        dest: "{{ app_dir }}/prometheus.yml"
+        owner: ubuntu
+        group: ubuntu
+        mode: "0644"
+
     - name: Stop old docker containers to release port 80
       shell: |
         docker compose down --remove-orphans || true
