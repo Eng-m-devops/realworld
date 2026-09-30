@@ -54,7 +54,7 @@
               container_name: grafana
               restart: unless-stopped
               environment:
-                - GF_SERVER_ROOT_URL=http://localhost:3000/grafana/
+                - GF_SERVER_ROOT_URL=http://{{ inventory_hostname }}/grafana/
                 - GF_SERVER_SERVE_FROM_SUB_PATH=true
               ports:
                 - "3000:3000"
