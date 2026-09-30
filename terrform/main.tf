@@ -93,3 +93,9 @@ resource "aws_instance" "my_first_ec2" {
     Name = "RealWorld-VPS"
   }
 }
+
+# 5. التحديث التلقائي لملف Ansible Inventory بالـ IP الجديد
+resource "local_file" "ansible_inventory" {
+  content  = "[webservers]\n${aws_instance.my_first_ec2.public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa\n"
+  filename = "${path.module}/../ansible/hosts.ini"
+}
