@@ -85,9 +85,24 @@
     # -----------------------------------------------
     # 3. إنشاء البيئة وتشغيل الحاويات الجديدة
     # -----------------------------------------------
-    - name: Copy .env.prod file to server
+    - name: Generate .env file on server with dynamic environment variables
       copy:
-        src: ./.env.prod
+        content: |
+          POSTGRES_DB={{ postgres_db | default('conduit') }}
+          POSTGRES_USER={{ postgres_user | default('postgres_user') }}
+          POSTGRES_PASSWORD={{ postgres_password | default('AdminPass12345') }}
+          POSTGRES_PORT=5432
+          DB_HOST=db
+          PYTHONUNBUFFERED=1
+          SECRET_KEY={{ django_secret_key | default('awIQPp_oykheM90AKM-fS4jm_-rPJGx1DCOWrSK8YkeyU67FJvyKLB6LGzpjMj2XoKU') }}
+          DEBUG=0
+          ALLOWED_HOSTS=*
+          DATABASE_URL=postgres://{{ postgres_user | default('postgres_user') }}:{{ postgres_password | default('AdminPass12345') }}@db:5432/{{ postgres_db | default('conduit') }}
+          DJANGO_SUPERUSER_USERNAME={{ django_superuser_username | default('admin') }}
+          DJANGO_SUPERUSER_EMAIL={{ django_superuser_email | default('admin@example.com') }}
+          DJANGO_SUPERUSER_PASSWORD={{ django_superuser_password | default('admin12345') }}
+          DOCKER_USERNAME={{ docker_username | default('mahmoodahmed11') }}
+          IMAGE_TAG={{ image_tag | default('latest') }}
         dest: "{{ app_dir }}/.env"
         owner: ubuntu
         group: ubuntu

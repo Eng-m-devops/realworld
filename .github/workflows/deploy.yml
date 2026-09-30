@@ -53,7 +53,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '18'
 
       - name: Install & Test Frontend (if changed)
         if: needs.detect-changes.outputs.frontend == 'true'
@@ -130,4 +130,6 @@ jobs:
           # تشغيل النشر مع تمرير الأسرار كمتغيرات لـ Ansible
           ansible-playbook -i hosts.ini playbook.yml -v \
             -e postgres_password="$POSTGRES_PASSWORD" \
-            -e django_secret_key="$DJANGO_SECRET_KEY"
+            -e django_secret_key="$DJANGO_SECRET_KEY" \
+            -e docker_username="${{ secrets.DOCKER_USERNAME }}" \
+            -e image_tag="${{ github.sha }}"
