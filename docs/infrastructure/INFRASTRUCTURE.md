@@ -14,7 +14,7 @@
 
 ### 1️⃣ خادم EC2 (AWS Instance)
 
-- **المكافئ البرمجي**: `aws_instance.my_first_ec2` في ملف `terrform/main.tf`.
+- **المكافئ البرمجي**: `aws_instance.my_first_ec2` في ملف `terraform/main.tf`.
 - **النوع**: `t3.micro`.
 - **نظام التشغيل**: Ubuntu Server 24.04 LTS (`noble`).
 

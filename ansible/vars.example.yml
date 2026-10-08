@@ -1,0 +1,17 @@
+# ------------------------------------------------------------------------------
+# Ansible Non-Sensitive Configuration Variables Template
+# ------------------------------------------------------------------------------
+app_dir: /home/ubuntu/app
+monitoring_dir: /home/ubuntu/monitoring
+docker_username: mahmoodahmed11
+image_tag: latest
+
+postgres_db: conduit
+postgres_user: postgres_user
+postgres_port: 5432
+db_host: db
+
+django_debug: "0"
+django_allowed_hosts: "*"
+django_superuser_username: admin
+django_superuser_email: admin@example.com

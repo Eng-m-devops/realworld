@@ -9,3 +9,16 @@ variable "aws_region" {
   type        = string
   default     = "us-east-1"
 }
+
+variable "instance_type" {
+  description = "EC2 Instance type"
+  type        = string
+  default     = "t3.micro"
+}
+
+variable "volume_size" {
+  description = "Root EBS volume size in GB"
+  type        = number
+  default     = 20
+}
+
