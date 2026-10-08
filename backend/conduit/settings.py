@@ -22,7 +22,7 @@ from django.core.exceptions import ImproperlyConfigured
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Quick-start development settings - unsuitable for production
-DEBUG = os.environ.get('DEBUG', '1').lower() in ('1', 'true', 'yes')
+DEBUG = os.environ.get('DEBUG', '0').lower() in ('1', 'true', 'yes')
 
 SECRET_KEY = os.environ.get('SECRET_KEY', os.environ.get('DJANGO_SECRET_KEY'))
 if not SECRET_KEY:

@@ -23,6 +23,8 @@ jobs:
           python-version: '3.11'
 
       - name: Install Dependencies & Run Flake8 Lint + Django Tests
+        env:
+          DEBUG: '1'
         run: |
           cd backend
           python -m pip install --no-cache-dir --upgrade pip
