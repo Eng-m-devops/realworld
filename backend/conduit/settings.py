@@ -16,19 +16,28 @@ try:
 except ImportError:
     dj_database_url = None
 
+from django.core.exceptions import ImproperlyConfigured
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Quick-start development settings - unsuitable for production
-SECRET_KEY = os.environ.get('SECRET_KEY', os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-conduit-default-dev-key'))
-
 DEBUG = os.environ.get('DEBUG', '1').lower() in ('1', 'true', 'yes')
+
+SECRET_KEY = os.environ.get('SECRET_KEY', os.environ.get('DJANGO_SECRET_KEY'))
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-dev-only-secret-key-do-not-use-in-production'
+    else:
+        raise ImproperlyConfigured("SECRET_KEY environment variable is required in production.")
 
 allowed_hosts_env = os.environ.get('ALLOWED_HOSTS', '')
 if allowed_hosts_env:
     ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_env.split(',') if h.strip()]
-else:
+elif DEBUG:
     ALLOWED_HOSTS = ['*', 'localhost', '127.0.0.1']
+else:
+    raise ImproperlyConfigured("ALLOWED_HOSTS environment variable is required in production.")
 
 
 # Application definition
@@ -167,14 +176,34 @@ STATIC_URL = '/static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:4000',
-    'http://127.0.0.1:4000',
-    'http://0.0.0.0:4000',
-    'http://localhost:4100',
-    'http://127.0.0.1:4100',
-]
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', '0').lower() in ('1', 'true', 'yes')
+cors_allowed_env = os.environ.get('CORS_ALLOWED_ORIGINS', '')
+if cors_allowed_env:
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_allowed_env.split(',') if origin.strip()]
+elif DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        'http://localhost:4000',
+        'http://127.0.0.1:4000',
+        'http://0.0.0.0:4000',
+        'http://localhost:4100',
+        'http://127.0.0.1:4100',
+    ]
+else:
+    CORS_ALLOWED_ORIGINS = []
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', '0').lower() in ('1', 'true', 'yes')
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', '1').lower() in ('1', 'true', 'yes')
+    CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', '1').lower() in ('1', 'true', 'yes')
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
+    X_FRAME_OPTIONS = 'DENY'
+    if os.environ.get('SECURE_HSTS_SECONDS'):
+        SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '31536000'))
+        SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+        SECURE_HSTS_PRELOAD = True
+
 
 # Tell Django about the custom `User` model we created. The string
 # `authentication.User` tells Django we are referring to the `User` model in
