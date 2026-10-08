@@ -1,0 +1,8 @@
+# ------------------------------------------------------------------------------
+# Ansible Vault Sensitive Secrets Template
+# Encrypt this file using: ansible-vault encrypt ansible/vars/vault.yml
+# ------------------------------------------------------------------------------
+vault_postgres_password: "CHANGE_ME_SUPER_SECRET_DB_PASSWORD"
+vault_django_secret_key: "CHANGE_ME_SUPER_SECRET_DJANGO_KEY"
+vault_django_superuser_password: "CHANGE_ME_SUPER_SECRET_ADMIN_PASSWORD"
+vault_grafana_admin_password: "CHANGE_ME_SUPER_SECRET_GRAFANA_PASSWORD"

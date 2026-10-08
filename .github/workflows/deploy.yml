@@ -1,135 +1,209 @@
-name: RealWorld CI/CD & Auto Deploy
+name: RealWorld Enterprise CI/CD Pipeline
 
 on:
   push:
     branches: [ "main", "production" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "production" ]
 
 jobs:
   # ==========================================
-  # Job 1: تحديد الملفات التي تغيرت (Path Filter)
+  # 1️⃣ Linting & Code Testing Phase
   # ==========================================
-  detect-changes:
+  lint-and-test:
+    name: 1. Code Quality & Unit Tests
     runs-on: ubuntu-latest
-    outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            backend:
-              - 'backend/**'
-            frontend:
-              - 'frontend/**'
-
-  # ==========================================
-  # Job 2: مرحلة الاختبار (Test Phase)
-  # ==========================================
-  test:
-    name: Run Unit Tests
-    runs-on: ubuntu-latest
-    needs: detect-changes
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: '3.11'
 
-      - name: Install & Test Backend (if changed)
-        if: needs.detect-changes.outputs.backend == 'true'
+      - name: Install Dependencies & Run Flake8 Lint + Django Tests
         run: |
           cd backend
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          python -m pip install --no-cache-dir --upgrade pip
+          pip install --no-cache-dir flake8
+          if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; fi
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
           python manage.py test
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@1d0e472a52d7f844103630f65173e6ed3ff1614f # v4.2.0
         with:
           node-version: '18'
 
-      - name: Install & Test Frontend (if changed)
-        if: needs.detect-changes.outputs.frontend == 'true'
+      - name: Install Dependencies & Run Frontend Tests
         run: |
           cd frontend
           npm install
           CI=true npm test
 
   # ==========================================
-  # Job 3: مرحلة البناء والرفع الذكي (Smart Build)
+  # 2️⃣ Terraform Infrastructure Validation Phase
   # ==========================================
-  build:
-    name: Build & Push Docker Images
+  terraform-validate:
+    name: 2. Terraform Validate
     runs-on: ubuntu-latest
-    needs: [detect-changes, test]
-    # يتم البناء فقط إذا حدث تغيير حقيقي في الكود ولم يتم تخطيه
-    if: needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.frontend == 'true'
-
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup OpenTofu / Terraform
+        uses: opentofu/setup-opentofu@ae80d40b614e8b394142f9b2d86f78f87e50c4ef # v1.0.5
+        with:
+          tofu_version: "1.6.2"
+
+      - name: OpenTofu Format Check & Validate
+        run: |
+          cd terraform
+          tofu init -backend=false
+          tofu fmt -check
+          tofu validate
+
+  # ==========================================
+  # 3️⃣ Ansible Syntax & Lint Check Phase
+  # ==========================================
+  ansible-check:
+    name: 3. Ansible Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python & Ansible
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+
+      - name: Install Ansible & Run Syntax Check
+        run: |
+          python -m pip install --no-cache-dir --upgrade pip
+          pip install --no-cache-dir ansible
+          cd ansible
+          ansible-playbook -i hosts.example.ini setup-server.yml --syntax-check
+          ansible-playbook -i hosts.example.ini playbook.yml --syntax-check
+          ansible-playbook -i hosts.example.ini monitoring.yml --syntax-check
+
+  # ==========================================
+  # 4️⃣ Docker Build & Image Push Phase
+  # ==========================================
+  docker-build:
+    name: 4. Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: [lint-and-test, terraform-validate, ansible-check]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push Backend Image with Git SHA
-        if: needs.detect-changes.outputs.backend == 'true'
+      - name: Build Backend Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/realworld-backend:${{ github.sha }} -t ${{ secrets.DOCKER_USERNAME }}/realworld-backend:latest ./backend
-          docker push ${{ secrets.DOCKER_USERNAME }}/realworld-backend:${{ github.sha }}
-          docker push ${{ secrets.DOCKER_USERNAME }}/realworld-backend:latest
+          docker build -t local/realworld-backend:${{ github.sha }} ./backend
 
-      - name: Build and Push Frontend Image with Git SHA (If frontend changed)
-        if: needs.detect-changes.outputs.frontend == 'true'
+      - name: Build Frontend Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/realworld-frontend:${{ github.sha }} -t ${{ secrets.DOCKER_USERNAME }}/realworld-frontend:latest ./frontend
-          docker push ${{ secrets.DOCKER_USERNAME }}/realworld-frontend:${{ github.sha }}
-          docker push ${{ secrets.DOCKER_USERNAME }}/realworld-frontend:latest
+          docker build -t local/realworld-frontend:${{ github.sha }} ./frontend
+
+      - name: Push Images to Docker Hub (On Push Only)
+        if: github.event_name != 'pull_request'
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        run: |
+          DOCKER_USER="$DOCKER_USERNAME"
+          docker tag local/realworld-backend:${{ github.sha }} $DOCKER_USER/realworld-backend:${{ github.sha }}
+          docker tag local/realworld-backend:${{ github.sha }} $DOCKER_USER/realworld-backend:latest
+          docker push $DOCKER_USER/realworld-backend:${{ github.sha }}
+          docker push $DOCKER_USER/realworld-backend:latest
+
+          docker tag local/realworld-frontend:${{ github.sha }} $DOCKER_USER/realworld-frontend:${{ github.sha }}
+          docker tag local/realworld-frontend:${{ github.sha }} $DOCKER_USER/realworld-frontend:latest
+          docker push $DOCKER_USER/realworld-frontend:${{ github.sha }}
+          docker push $DOCKER_USER/realworld-frontend:latest
 
   # ==========================================
-  # Job 4: النشر التلقائي عبر Ansible (عند الدمج في production)
+  # 5️⃣ Trivy Vulnerability Scan Phase
+  # ==========================================
+  trivy-scan:
+    name: 5. Trivy Security Scan
+    runs-on: ubuntu-latest
+    needs: docker-build
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Build Backend Image locally for Scan
+        run: docker build -t local/realworld-backend:scan ./backend
+
+      - name: Run Trivy vulnerability scanner on Backend
+        uses: aquasecurity/trivy-action@18f2510ee396bbf400402250bc34313eb3bfd755 # v0.29.0
+        with:
+          image-ref: 'local/realworld-backend:scan'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Build Frontend Image locally for Scan
+        run: docker build -t local/realworld-frontend:scan ./frontend
+
+      - name: Run Trivy vulnerability scanner on Frontend
+        uses: aquasecurity/trivy-action@18f2510ee396bbf400402250bc34313eb3bfd755 # v0.29.0
+        with:
+          image-ref: 'local/realworld-frontend:scan'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+  # ==========================================
+  # 6️⃣ Automated Deployment via Ansible Phase
   # ==========================================
   deploy:
-    name: Deploy to AWS EC2 via Ansible
+    name: 6. Deploy to AWS EC2
     runs-on: ubuntu-latest
-    needs: build
-    # هذه الخطوة ستعمل حصرياً عندما يتم الرفع أو الدمج في برانش production
-    if: github.ref == 'refs/heads/production' && (success())
+    needs: [docker-build, trivy-scan]
+    if: github.ref == 'refs/heads/production' && github.event_name == 'push'
 
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up SSH Key for AWS EC2
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@dc588b651fe134757724b4403757316e6154c12c # v0.9.0
         with:
           ssh-private-key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
 
-      - name: Run Ansible Playbook
+      - name: Run Ansible Deployment Playbook
         env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DJANGO_SUPERUSER_PASSWORD: ${{ secrets.DJANGO_SUPERUSER_PASSWORD }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         run: |
           cd ansible
-          # إضافة السيرفر مؤقتاً للـ known_hosts لتجنب التوقف التفاعلي
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts          
-          # تثبيت Ansible في الـ Runner المؤقت
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+          echo "[webservers]" > hosts.ini
+          echo "$EC2_HOST ansible_user=ubuntu" >> hosts.ini
+          
           sudo apt-get update && sudo apt-get install -y ansible
           
-          # تشغيل النشر مع تمرير الأسرار كمتغيرات لـ Ansible
           ansible-playbook -i hosts.ini playbook.yml -v \
             -e postgres_password="$POSTGRES_PASSWORD" \
             -e django_secret_key="$DJANGO_SECRET_KEY" \
-            -e docker_username="${{ secrets.DOCKER_USERNAME }}" \
+            -e django_superuser_password="$DJANGO_SUPERUSER_PASSWORD" \
+            -e docker_username="$DOCKER_USERNAME" \
             -e image_tag="${{ github.sha }}"

@@ -2,7 +2,7 @@
 terraform {}
 
 provider "aws" {
-  region = "us-east-1"
+  region = var.aws_region
 }
 
 # 1. البحث عن أحدث صورة Ubuntu تلقائياً
@@ -48,20 +48,6 @@ resource "aws_security_group" "my_web_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  ingress {
-    from_port   = 3000
-    to_port     = 3000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 9090
-    to_port     = 9090
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -79,12 +65,12 @@ resource "aws_key_pair" "deployer" {
 # 4. الخادم (EC2 Instance)
 resource "aws_instance" "my_first_ec2" {
   ami                    = data.aws_ami.ubuntu.id
-  instance_type          = "t3.micro"
+  instance_type          = var.instance_type
   vpc_security_group_ids = [aws_security_group.my_web_sg.id]
   key_name               = aws_key_pair.deployer.key_name
 
   root_block_device {
-    volume_size           = 20
+    volume_size           = var.volume_size
     volume_type           = "gp3"
     delete_on_termination = true
   }

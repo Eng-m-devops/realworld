@@ -2,10 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# تثبيت متطلبات النظام المساعدة
+# تثبيت متطلبات النظام المساعدة وإنشاء مستخدم غير جذر
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc postgresql-client && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    useradd -m -u 1000 appuser
+
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -14,7 +16,9 @@ COPY . .
 
 # نسخ سكريبت الإقلاع وإعطاء صلاحيات التنفيذ
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh && chown -R appuser:appuser /app /entrypoint.sh
+
+USER appuser
 
 ENTRYPOINT ["/entrypoint.sh"]
 

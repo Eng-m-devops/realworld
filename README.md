@@ -4,84 +4,97 @@
 
 ---
 
-## معمارية النظام (DevOps Architecture Diagram)
+## 🏗️ معمارية النظام (System Architecture)
+
+```text
+AWS
+ │
+ ├── EC2
+ │    │
+ │    ├── Nginx
+ │    ├── Django + Gunicorn
+ │    ├── PostgreSQL
+ │    └── React
+ │
+ ├── Prometheus
+ └── Grafana
+
+Terraform
+    ↓
+Infrastructure
+
+Ansible
+    ↓
+Configuration
+
+Docker
+```
 
 ![RealWorld DevOps Architecture](docs/devops_architecture.png)
 
 ---
 
-## التقنيات المستخدمة (Tech Stack)
+## 🛠️ التقنيات المستخدمة (Tech Stack)
 
 - **Infrastructure as Code (IaC)**: OpenTofu / Terraform
 - **Cloud Provider**: AWS (EC2 Ubuntu 24.04 LTS, Security Groups, 20GB GP3 EBS)
-- **Configuration Management**: Ansible
+- **Configuration Management**: Ansible (Ansible Vault)
 - **Containerization & Orchestration**: Docker & Docker Compose
 - **Reverse Proxy & Web Server**: Host-level Nginx (Ports 80 / 443)
 - **Backend Application**: Django (Gunicorn WSGI)
 - **Frontend Application**: React SPA (Production Build Nginx)
 - **Database**: PostgreSQL 15 (Alpine)
-- **CI/CD Pipeline**: GitHub Actions
+- **CI/CD Pipeline**: GitHub Actions (Lint, Test, Terraform Validate, Ansible Check, Docker Build, Trivy Security Scan, Deploy)
 - **Monitoring & Observability**: Prometheus & Grafana
 
 ---
 
-## وثائق الخدمات المخصصة (Detailed Documentation)
+## 📚 وثائق الخدمات المخصصة (Detailed Documentation)
 
 لكل خدمة وثيقة مستقلة ومخطط رسومي توضيحي مخصص داخل مجلد `docs/`:
 
-- **[معمارية Docker والحاويات](docs/DOCKER.md)**: تفاصيل عزل الحاويات وشبكة التواصل الداخلية.
-- **[خط النشر الآلي CI/CD](docs/CICD.md)**: خطوات بناء البايبلاين، الاختبارات والنشر الآلي عبر GitHub Actions.
-- **[البنية التحتية السحابية IaC](docs/INFRASTRUCTURE.md)**: شرح موارد AWS و OpenTofu و Ansible.
-- **[منظومة المراقبة والتحليلات](docs/MONITORING.md)**: تفاصيل إعداد Prometheus و Grafana والتنبيهات.
+- **[معمارية Docker والحاويات](docs/docker/DOCKER.md)**: تفاصيل عزل الحاويات وشبكة التواصل الداخلية.
+- **[خط النشر الآلي CI/CD](docs/cicd/CICD.md)**: خطوات بناء البايبلاين، الاختبارات والنشر الآلي عبر GitHub Actions.
+- **[البنية التحتية السحابية IaC](docs/infrastructure/INFRASTRUCTURE.md)**: شرح موارد AWS و OpenTofu و Ansible.
+- **[منظومة المراقبة والتحليلات](docs/monitoring/MONITORING.md)**: تفاصيل إعداد Prometheus و Grafana والتنبيهات.
 
 ---
 
-## تفاصيل البنية التحتية (Architecture Components)
+## 🚀 دليل التشغيل والتنفيذ المباشر (Quick Start Guide)
 
-### 1. السيرفر والشبكات (Cloud & OS)
+لتشغيل المشروع لأول مرة دون مواجهة أي مشاكل مسارات أو أسرار:
 
-- **سيرفر EC2 (t3.micro)** يعمل بنظام Ubuntu 24.04 LTS.
-- **وحدة التخزين**: 20GB GP3 SSD لمنح مساحة كافية للـ Docker Layers والـ Logs.
-- **إدارة الذاكرة**: تخصيص 2GB Swap Memory لمنع انقطاع الخدمات عند ارتفاع الاستهلاك (OOM Prevention).
-- **الجدار الناري (Security Group)**:
-  - `Port 22`: مفتوح للاتصال الآمن عبر SSH.
-  - `Port 80`: استقبال حركة مرور HTTP.
-  - `Port 443`: التشفير الآمن عبر شهادات HTTPS/SSL.
-
-### 2. الشبكة الداخلية وعزل الحاويات (Networking & Proxy)
-
-- **Host Nginx Proxy**: يعمل مباشرة على السيرفر لتوجيه الحركة:
-  - `/` -> يوجه إلى حاوية React الواجهة الأمامية (`127.0.0.1:8080`).
-  - `/api/` -> يوجه إلى حاوية Django الـ Backend (`127.0.0.1:8000`).
-- **عزل الحاويات**: الحاويات مغلقة محلياً ولا يمكن الوصول المباشر لقواعد البيانات أو الحاويات من خارج السيرفر إلا عبر Nginx.
-
-### 3. المراقبة والمتابعة (Monitoring Stack)
-
-- **Prometheus (Port 9090)**: تجميع واستعلام المقاييس والبيانات التشغيلية.
-- **Grafana (Port 3000)**: لوحات تحكم تفاعلية لمتابعة صحة المعالج، الذاكرة، وقاعدة البيانات.
-
----
-
-## دليل النشر والتشغيل (Deployment Guide)
-
-### 1️⃣ تجهيز البنية التحتية (OpenTofu / Terraform)
+### 1️⃣ الاستنساخ والتهيئة הראשية (Clone & Preparation)
 
 ```bash
-cd terrform
+git clone https://github.com/your-username/RealWorld.git
+cd RealWorld
+```
+
+### 2️⃣ بناء البنية التحتية (Terraform / OpenTofu)
+
+```bash
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+# قم بتعديل القيم داخل terraform.tfvars حسب الحاجة
 tofu init
 tofu plan
 tofu apply -auto-approve
 ```
 
-### 2️⃣ تهيئة وتجهيز السيرفر (Ansible)
+سيتم إنشاء خادم EC2 وإخراج الـ Public IP تلقائياً، بالإضافة إلى توليد ملف `ansible/hosts.ini` ديناميكياً.
+
+### 3️⃣ تهيئة وتجهيز الخادم (Ansible Automation)
 
 ```bash
 cd ../ansible
+cp vars.example.yml vars.yml
+cp .env.example .env.prod
 
-# 1. تثبيت وتجهيز السيرفر والـ Swap و Docker
+# 1. تجهيز بيئة السيرفر وتركيب Docker
 ansible-playbook -i hosts.ini setup-server.yml
 
-# 2. نشر التطبيق والـ Nginx الرئيسية
+# 2. نشر التطبيق والـ Nginx الرئيسي
 ansible-playbook -i hosts.ini playbook.yml
 
 # 3. تشغيل منظومة المراقبة Prometheus & Grafana
@@ -90,20 +103,28 @@ ansible-playbook -i hosts.ini monitoring.yml
 
 ---
 
-## خط النشر الآلي (CI/CD Pipeline)
+## 🔄 خط النشر الآلي (CI/CD Pipeline)
 
-عند إجراء أي `git push` إلى فرع `production`:
+عند إجراء أي `git push` أو دمج في فرع `production`:
 
-1. يتم تشغيل **GitHub Actions Workflow** تلقائياً.
-2. بناء صور Docker وتحديد إصداره بـ Git Commit SHA.
-3. رفع الصور إلى **Docker Hub**.
-4. الاتصال بالسيرفر عبر SSH وتشغيل التحديث الآلي بدون توقف الخدمة (Zero-Downtime Deployment).
+```text
+Push ➔ Lint & Tests ➔ Terraform Validate ➔ Ansible Check ➔ Docker Build ➔ Trivy Scan ➔ Deploy
+```
+
+1. **Lint & Tests**: فحص جودة الكود واختبارات الوحدة للـ Backend والـ Frontend.
+2. **Terraform Validate**: التحقق من سلامة وثائق البنية التحتية بـ OpenTofu.
+3. **Ansible Check**: فحص صياغة الـ Playbooks والـ Roles.
+4. **Docker Build**: بناء وحفظ صور الحاويات مع وسم Git Commit SHA.
+5. **Trivy Scan**: فحص أمن الصور واكتشاف الثغرات.
+6. **Deploy**: النشر الفوري الآمن على خادم AWS EC2 دون توقف الخدمة.
 
 ---
 
-## اختبار واستقرار النظام (Health & E2E Testing)
+## 🌐 اختبار واستقرار النظام (Health Verification)
 
-- **الواجهة الرئيسية**: `http://54.80.244.31/`
-- **الـ API Endpoint**: `http://54.80.244.31/api/articles`
-- **لوحة Grafana**: `http://54.80.244.31:3000`
-- **Prometheus**: `http://54.80.244.31:9090`
+بعد اكتمال عملية النشر، يمكنك استخدام الـ Public IP الخاص بخادمك (مثلاً `<EC2_PUBLIC_IP>`):
+
+- **الواجهة الرئيسية**: `http://<EC2_PUBLIC_IP>/`
+- **الـ API Endpoint**: `http://<EC2_PUBLIC_IP>/api/articles`
+- **لوحة Grafana (عبر local tunnel أو proxy)**: `http://localhost:3000`
+- **Prometheus (عبر local tunnel أو proxy)**: `http://localhost:9090`

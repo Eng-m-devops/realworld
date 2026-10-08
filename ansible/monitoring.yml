@@ -1,6 +1,9 @@
 - name: Deploy Monitoring Stack (Prometheus & Grafana)
   hosts: webservers
   become: yes
+  vars_files:
+    - vars.example.yml
+    - [ "vars/vault.yml", "vars/vault.example.yml" ]
   vars:
     monitoring_dir: /home/ubuntu/monitoring
   tasks:
@@ -46,7 +49,7 @@
                 - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
                 - prometheus_data:/prometheus
               ports:
-                - "9090:9090"
+                - "127.0.0.1:9090:9090"
               networks:
                 - monitoring
             grafana:
@@ -54,10 +57,10 @@
               container_name: grafana
               restart: unless-stopped
               environment:
-                - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(port)s/grafana/
-                - GF_SERVER_SERVE_FROM_SUB_PATH=true
+                - GF_SECURITY_ADMIN_USER={{ grafana_admin_user | default('admin') }}
+                - GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password | default(vault_grafana_admin_password) }}
               ports:
-                - "3000:3000"
+                - "127.0.0.1:3000:3000"
               volumes:
                 - grafana_data:/var/lib/grafana
               networks:
@@ -65,6 +68,7 @@
         dest: "{{ monitoring_dir }}/docker-compose.yml"
         owner: ubuntu
         group: ubuntu
+
 
     - name: Clean up unused Docker images and build cache
       shell: docker system prune -af --volumes || true
