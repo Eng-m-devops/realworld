@@ -20,7 +20,7 @@ except ImportError:
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Quick-start development settings - unsuitable for production
-SECRET_KEY = os.environ.get('SECRET_KEY', os.environ.get('DJANGO_SECRET_KEY', '2^f+3@v7$v1f8yt0!s)3-1t$)tlp+xm17=*g))_xoi&&9m#2a&'))
+SECRET_KEY = os.environ.get('SECRET_KEY', os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-conduit-default-dev-key'))
 
 DEBUG = os.environ.get('DEBUG', '1').lower() in ('1', 'true', 'yes')
 
@@ -102,7 +102,7 @@ if DATABASE_URL:
                 'ENGINE': 'django.db.backends.postgresql',
                 'NAME': url.path[1:] if url.path else 'conduit',
                 'USER': url.username or 'postgres_user',
-                'PASSWORD': url.password or 'AdminPass12345',
+                'PASSWORD': url.password or '',
                 'HOST': url.hostname or 'db',
                 'PORT': str(url.port or 5432),
             }
@@ -113,7 +113,7 @@ elif DB_HOST:
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.environ.get('POSTGRES_DB', 'conduit'),
             'USER': os.environ.get('POSTGRES_USER', 'postgres_user'),
-            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'AdminPass12345'),
+            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
             'HOST': DB_HOST,
             'PORT': os.environ.get('POSTGRES_PORT', '5432'),
         }

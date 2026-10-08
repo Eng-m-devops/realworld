@@ -40,7 +40,7 @@ jobs:
         run: |
           cd frontend
           npm install
-          CI=true npm test -- --passWithNoTests
+          CI=true npm test
 
   # ==========================================
   # 2️⃣ Terraform Infrastructure Validation Phase

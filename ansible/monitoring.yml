@@ -58,7 +58,7 @@
               restart: unless-stopped
               environment:
                 - GF_SECURITY_ADMIN_USER={{ grafana_admin_user | default('admin') }}
-                - GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password | default(vault_grafana_admin_password | default('ChangeMeSecret123!')) }}
+                - GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password | default(vault_grafana_admin_password) }}
               ports:
                 - "127.0.0.1:3000:3000"
               volumes:
