@@ -22,3 +22,10 @@ variable "volume_size" {
   default     = 20
 }
 
+variable "ssh_allowed_cidr" {
+  description = "Allowed CIDR block for SSH access (default 0.0.0.0/0 for dev, restrict to YOUR_ADMIN_IP/32 in production)"
+  type        = string
+  default     = "0.0.0.0/0"
+}
+
+

@@ -19,13 +19,7 @@
 
     - name: Copy Prometheus configuration file
       copy:
-        content: |
-          global:
-            scrape_interval: 15s
-          scrape_configs:
-            - job_name: 'prometheus'
-              static_configs:
-                - targets: ['localhost:9090']
+        src: ./prometheus.yml
         dest: "{{ monitoring_dir }}/prometheus/prometheus.yml"
         owner: ubuntu
         group: ubuntu
@@ -48,10 +42,32 @@
               volumes:
                 - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
                 - prometheus_data:/prometheus
+              command:
+                - "--config.file=/etc/prometheus/prometheus.yml"
+                - "--storage.tsdb.path=/prometheus"
               ports:
                 - "127.0.0.1:9090:9090"
               networks:
                 - monitoring
+
+            node-exporter:
+              image: prom/node-exporter:latest
+              container_name: node-exporter
+              restart: unless-stopped
+              volumes:
+                - /proc:/host/proc:ro
+                - /sys:/host/sys:ro
+                - /:/rootfs:ro
+              command:
+                - "--path.procfs=/host/proc"
+                - "--path.rootfs=/rootfs"
+                - "--path.sysfs=/host/sys"
+                - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+              ports:
+                - "127.0.0.1:9100:9100"
+              networks:
+                - monitoring
+
             grafana:
               image: grafana/grafana:latest
               container_name: grafana
@@ -68,6 +84,7 @@
         dest: "{{ monitoring_dir }}/docker-compose.yml"
         owner: ubuntu
         group: ubuntu
+
 
 
     - name: Clean up unused Docker images and build cache

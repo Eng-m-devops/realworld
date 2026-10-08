@@ -28,7 +28,7 @@ jobs:
           python -m pip install --no-cache-dir --upgrade pip
           pip install --no-cache-dir flake8
           if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; fi
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           python manage.py test
 
       - name: Set up Node.js
@@ -149,7 +149,7 @@ jobs:
         with:
           image-ref: 'local/realworld-backend:scan'
           format: 'table'
-          exit-code: '0'
+          exit-code: '1'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
@@ -162,7 +162,7 @@ jobs:
         with:
           image-ref: 'local/realworld-frontend:scan'
           format: 'table'
-          exit-code: '0'
+          exit-code: '1'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'

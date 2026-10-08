@@ -67,8 +67,8 @@ Docker
 ### 1️⃣ الاستنساخ والتهيئة הראשية (Clone & Preparation)
 
 ```bash
-git clone https://github.com/your-username/RealWorld.git
-cd RealWorld
+git clone https://github.com/Eng-m-devops/realworld.git
+cd realworld
 ```
 
 ### 2️⃣ بناء البنية التحتية (Terraform / OpenTofu)
@@ -116,7 +116,7 @@ Push ➔ Lint & Tests ➔ Terraform Validate ➔ Ansible Check ➔ Docker Build 
 3. **Ansible Check**: فحص صياغة الـ Playbooks والـ Roles.
 4. **Docker Build**: بناء وحفظ صور الحاويات مع وسم Git Commit SHA.
 5. **Trivy Scan**: فحص أمن الصور واكتشاف الثغرات.
-6. **Deploy**: النشر الفوري الآمن على خادم AWS EC2 دون توقف الخدمة.
+6. **Deploy**: النشر التلقائي الآمن على خادم AWS EC2 عبر استراتيجية أتمتة الأنظمة وفحوصات السلامة التشغيلية (Automated deployment with health checks and container restart strategy).
 
 ---
 
