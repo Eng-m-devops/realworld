@@ -103,8 +103,7 @@ jobs:
 
       - name: Build Backend Image
         run: |
-          docker build -t local/realworld-backend:${{ github.sha }} ./backend
-
+          docker build --no-cache -t local/realworld-backend:scan ./backend
       - name: Build Frontend Image
         run: |
           docker build -t local/realworld-frontend:${{ github.sha }} ./frontend
