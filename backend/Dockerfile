@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt .
 
-# 1. تحديث الأدوات الأساسية وإجبار التحديث على الإصدارات الآمنة
+# تحديث الأدوات الأساسية وإجبار التحديث على الإصدارات الآمنة
 RUN pip install --no-cache-dir --upgrade pip "setuptools>=78.1.1" wheel && \
     pip install --no-cache-dir --upgrade -r requirements.txt
 
