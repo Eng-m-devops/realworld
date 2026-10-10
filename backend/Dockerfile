@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir --upgrade pip "setuptools>=78.1.1" wheel && \
     pip install --no-cache-dir --upgrade -r requirements.txt
 
 COPY . .
+RUN rm -rf /app/venv /app/.venv /app/env /app/__pycache__
 
 # نسخ سكريبت الإقلاع وإعطاء صلاحيات التنفيذ
 COPY entrypoint.sh /entrypoint.sh
