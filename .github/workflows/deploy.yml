@@ -200,12 +200,25 @@ jobs:
           mkdir -p ~/.ssh
           eval $(ssh-agent -s)
           echo "$AWS_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-          echo "Waiting for SSH connection to $EC2_HOST..."
+          # تنظيف أي مسافات زائدة من الـ IP
+          EC2_HOST=$(echo "$EC2_HOST" | xargs)
+          echo "Connecting to EC2 Host: $EC2_HOST..."
+
+          SSH_SUCCESS=0
           for i in {1..12}; do
-            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -q ubuntu@"$EC2_HOST" exit && break || true
-            echo "SSH not ready yet, waiting 5 seconds... ($i/12)"
+            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -q ubuntu@"$EC2_HOST" exit; then
+              echo "SSH connection to $EC2_HOST succeeded!"
+              SSH_SUCCESS=1
+              break
+            fi
+            echo "SSH to $EC2_HOST not ready yet, retrying in 5 seconds... ($i/12)"
             sleep 5
           done
+
+          if [ "$SSH_SUCCESS" -ne 1 ]; then
+            echo "::error::Could not connect to $EC2_HOST via SSH. Please verify that EC2_HOST secret in GitHub Repository Secrets matches the active EC2 IP (currently 54.82.215.188)."
+            exit 1
+          fi
 
           cd ansible
           echo "[webservers]" > hosts.ini
