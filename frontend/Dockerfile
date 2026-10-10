@@ -13,6 +13,9 @@ RUN npm run build
 
 
 FROM nginx:alpine
+# تحديث حزم حماية النظام الثنائية لإغلاق ثغرات الأمن Alpine (libexpat, pcre2, tiff)
+RUN apk update && apk upgrade --no-cache
+
 # نسخ إعدادات Nginx المخصصة لتقديم ملفات React داخل الحاوية
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
