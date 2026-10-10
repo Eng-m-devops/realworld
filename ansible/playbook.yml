@@ -117,3 +117,34 @@
       args:
         chdir: "{{ app_dir }}"
 
+    # -----------------------------------------------
+    # 4. إعداد سكريبتات والـ Cron Job للنسخ الاحتياطي لقاعدة البيانات
+    # -----------------------------------------------
+    - name: Copy backup and restore scripts to server
+      copy:
+        src: "{{ item }}"
+        dest: "{{ app_dir }}/{{ item }}"
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+      loop:
+        - backup.sh
+        - restore.sh
+
+    - name: Ensure PostgreSQL backup directory exists with secure permissions
+      file:
+        path: /var/backups/postgres
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0750"
+
+    - name: Set up daily automated PostgreSQL backup Cron job (runs at 2:00 AM)
+      cron:
+        name: "Daily PostgreSQL Database Backup"
+        minute: "0"
+        hour: "2"
+        job: "/bin/bash {{ app_dir }}/backup.sh >> /var/log/postgres_backup.log 2>&1"
+        user: ubuntu
+
+
