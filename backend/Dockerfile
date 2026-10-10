@@ -10,9 +10,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt .
 
-# تحديث الأدوات الأساسية وإجبار التحديث على الإصدارات الآمنة
+# تحديث الأدوات الأساسية وإجبار التحديث على الإصدارات الآمنة، وتنظيف الملفات القديمة لمنع إنذارات trivy
 RUN pip install --no-cache-dir --upgrade pip "setuptools>=78.1.1" wheel && \
-    pip install --no-cache-dir --upgrade -r requirements.txt
+    pip install --no-cache-dir --upgrade -r requirements.txt && \
+    rm -rf /usr/local/lib/python3.11/site-packages/pip/_vendor
 
 COPY . .
 RUN rm -rf /app/venv /app/.venv /app/env /app/__pycache__
