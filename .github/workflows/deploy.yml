@@ -11,7 +11,7 @@ jobs:
   # 1️⃣ Linting & Code Testing Phase
   # ==========================================
   lint-and-test:
-    name: 1. Code Quality & Unit Tests
+    name: Code Quality & Unit Tests
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -103,7 +103,10 @@ jobs:
 
       - name: Build Backend Image
         run: |
-          docker build -t local/realworld-backend:${{ github.sha }} ./backend
+          docker build --no-cache \
+            -t local/realworld-backend:scan \
+            -t local/realworld-backend:${{ github.sha }} \
+            ./backend
 
       - name: Build Frontend Image
         run: |

@@ -8,9 +8,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/* && \
     useradd -m -u 1000 appuser
 
-
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && pip install --no-cache-dir -r requirements.txt
+
+# تحديث الأدوات الأساسية وإجبار التحديث على الإصدارات الآمنة
+RUN pip install --no-cache-dir --upgrade pip "setuptools>=78.1.1" wheel && \
+    pip install --no-cache-dir --upgrade -r requirements.txt
 
 COPY . .
 
@@ -22,5 +24,5 @@ USER appuser
 
 ENTRYPOINT ["/entrypoint.sh"]
 
-# تشغيل خادم الإنتاج Gunicorn بدلاً من runserver
+# تشغيل خادم الإنتاج Gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "conduit.wsgi:application"]
